@@ -1,13 +1,17 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
+
+use http::HeaderMap;
 
 use super::router::ERouterMethod;
 
-
-pub struct Request {
-	pub path: String
+#[derive(Debug)]
+pub struct Request<> {
+	pub method: String,
+	// pub body: &'a [u8],
+	pub parameters: HashMap<String, String>,
+	pub headers: HeaderMap,
+	pub(crate) path: String
 }
-
-
 
 pub struct Response {
 

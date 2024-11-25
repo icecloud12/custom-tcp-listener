@@ -6,7 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
 http = "1.1.0"
 httparse = "1.9.5"
 regex = "1.11.1"
 tokio = { version = "1.41.1", features = ["full"] }
+
+[lib]
+name = "custom_lib"
+path = "src/lib.rs"
