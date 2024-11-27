@@ -1,33 +1,25 @@
 
-use http::Response;
+use http::{Response, StatusCode};
 use tokio::{self, io::AsyncWriteExt, net::TcpStream};
 use dotenv::dotenv;
-
 use custom_lib::models::{
 	listener, router :: {
-		get, Router
+		response_to_bytes, Router, Route
 	}, types::Request
 };
 
+
 async fn hello_world(request: Request, mut tcpstream: TcpStream){
-	
-	let response_body = b"Hello World!";
-	let response_builder = Response::builder().status(200);
-	let response = response_builder.header("content-Length", response_body.len())
+	//response here
+	let response_body: &[u8] = b"Hello World!";
+	let response_builder = Response::builder().status(StatusCode::OK);
+	let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
 		.header("Content-Type", "text/json")
 		.body(response_body).unwrap();
-
-	let (parts, body) = response.into_parts();
-	let mut response_line = format!("{:#?} {}", parts.version, parts.status);
-	parts.headers.iter().for_each(
-		|(header_name, header_value)|{
-			response_line = response_line.clone() + "\r\n"+ &format!("{}:{}", header_name.as_str(), header_value.to_str().unwrap());
-		}		 
-	);
-	response_line = format!("{}\r\n\r\n{}", response_line,String::from_utf8(body.to_vec()).unwrap());
-	let _stream_write = tcpstream.write_all(response_line.as_bytes()).await;
+	let response_bytes = response_to_bytes(response);	
+	let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
 	let _stream_flush = tcpstream.flush().await;
-
+	
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
@@ -38,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 	
 
 	let mut router = Router::new();
-	router = router.route(format!("{prefix}/handshake/:text:/*"), get(hello_world));
+	router = router.route(format!("{prefix}/handshake/:text:/*"), Route::get(hello_world));
 	
 	listener::bind(router, address).await?;
 	Ok(())
