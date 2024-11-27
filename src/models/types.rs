@@ -5,16 +5,12 @@ use http::HeaderMap;
 use super::router::ERouterMethod;
 
 #[derive(Debug)]
-pub struct Request<> {
+pub struct Request {
 	pub method: String,
 	// pub body: &'a [u8],
 	pub parameters: HashMap<String, String>,
 	pub headers: HeaderMap,
-	pub(crate) path: String
-}
-
-pub struct Response {
-
+	pub path: String
 }
 
 
