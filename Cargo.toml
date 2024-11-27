@@ -10,6 +10,7 @@ dotenv = "0.15.0"
 http = "1.1.0"
 httparse = "1.9.5"
 regex = "1.11.1"
+serde = { version = "1.0.215", features = ["derive"] }
 tokio = { version = "1.41.1", features = ["full"] }
 
 [lib]
