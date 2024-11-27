@@ -1,14 +1,11 @@
 
-use std::{error::Error, future::Future, pin::Pin, process::Output};
-
-use http::{request, response, Response};
-use regex::Regex;
+use http::Response;
 use tokio::{self, io::AsyncWriteExt, net::TcpStream};
 use dotenv::dotenv;
 
 use custom_lib::models::{
 	listener, router :: {
-		get, ERouterMethod, Route, Router
+		get, Router
 	}, types::Request
 };
 
