@@ -2,16 +2,22 @@ use std::{collections::HashMap, future::Future, io::Error, ops::Range, pin::Pin,
 use http::HeaderMap;
 use regex::{Regex, RegexBuilder};
 use tokio::net::TcpStream;
-
+use http::Response;
 use super::types::Request;
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 
 
 
-async fn test(request: Request) {
-	
-	return ();
-	
+pub fn response_to_bytes( response: Response<&[u8]>) -> Vec<u8>{
+	let (parts, body) = response.into_parts();
+	let mut _response_line = format!("{:#?} {}\r\n", parts.version, parts.status);
+	parts.headers.iter().for_each(
+		|(header_name, header_value)|{
+			_response_line = _response_line.clone() + &format!("{}:{}\r\n", header_name.as_str(), header_value.to_str().unwrap());
+		}		 
+	);
+	let formatted_response = format!("{}\r\n\r\n{}", _response_line,String::from_utf8(body.to_vec()).unwrap());
+	formatted_response.as_bytes().to_vec()
 }
 
 //#region ERouterMethod
@@ -36,9 +42,44 @@ where
 {
 	pub method: ERouterMethod,
 	pub path: String,
-	pub closure: F,
+	pub handler: F,
 	pub parameters: Vec<String>,
 	pub regex: Regex
+}
+
+impl <F, O> Route<F, O>
+where
+	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
+	O: Future<Output = ()> +std::marker::Send  + 'static
+{
+	pub fn connect (handler: F)->(ERouterMethod, F){
+		(ERouterMethod::CONNECT, handler)
+	}
+	pub fn get(handler: F) -> (ERouterMethod, F){
+		(ERouterMethod::GET,handler)
+	}
+	pub fn delete (handler: F)->(ERouterMethod, F){
+		(ERouterMethod::DELETE, handler)
+	}
+	pub fn head (handler :F)->(ERouterMethod, F){
+		(ERouterMethod::HEAD, handler)
+	}
+	pub fn option (handler :F)->(ERouterMethod, F){
+		(ERouterMethod::OPTIONS, handler)
+	}
+	pub fn patch (handler :F)->(ERouterMethod, F){
+		(ERouterMethod::PATCH, handler)
+	}
+	pub fn post (handler :F)->(ERouterMethod, F){
+		(ERouterMethod::POST, handler)
+	}
+	pub fn put(handler :F)->(ERouterMethod, F){
+		(ERouterMethod::PUT, handler)
+	}
+	pub fn trace(handler :F)->(ERouterMethod, F){
+		(ERouterMethod::TRACE, handler)
+	}
+
 }
 //#endregion
 
@@ -63,7 +104,7 @@ impl ERouterMethod {
 	}
 }
 pub struct Router <F, O>
-where 
+	where 
 	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 	O: Future<Output = ()> +std::marker::Send  + 'static
 {
@@ -83,7 +124,7 @@ impl <F, O> Router<F, O>
 			keys: vec![]
 		}		
 	}
-	pub fn route (self, path:String, method_closure:(ERouterMethod, F)) -> Router<F, O>
+	pub fn route (self, path:String, route_helper:(ERouterMethod, F)) -> Router<F, O>
 	{
 		let mut hm= self.routes;
 		let mut keys = self.keys;
@@ -103,10 +144,10 @@ impl <F, O> Router<F, O>
 		
 		
 		
-		method_route_pairs.insert(method_closure.0.as_str().to_string(), Route{
-			method: method_closure.0,
+		method_route_pairs.insert(route_helper.0.as_str().to_string(), Route{
+			method: route_helper.0,
 			path,
-			closure: method_closure.1,
+			handler: route_helper.1,
 			parameters: path_parameters,
 			regex: regex_path.clone()
 		});
@@ -144,38 +185,13 @@ impl <F, O> Router<F, O>
 		let created_regex = RegexBuilder::new(route_regex.as_str()).build().unwrap();
 		(created_regex, path_parameters)
 	}
+	
 }
 
-// pub fn connect (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::CONNECT, closure)
-// }
-// pub fn delete (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::DELETE, closure)
-// }
-pub fn get<F, O> (closure: F) -> (ERouterMethod, F)
-	where 
-		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-		O: Future<Output = ()> +std::marker::Send  + 'static
-		{
-	let ret= (ERouterMethod::GET,closure);
-	ret
-}
-// pub fn head (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::HEAD, closure)
-// }
-// pub fn option (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::OPTIONS, closure)
-// }
-// pub fn patch (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::PATCH, closure)
-// }
-// pub fn post (closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::POST, closure)
-// }
-// pub fn put(closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::PUT, closure)
-// }
-// pub fn trace(closure: impl Future)->(ERouterMethod, impl Future){
-// 	return (ERouterMethod::TRACE, closure)
-// }
+
+
+
+
+
+
 
