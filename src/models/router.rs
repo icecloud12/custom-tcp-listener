@@ -16,7 +16,7 @@ pub fn response_to_bytes( response: Response<&[u8]>) -> Vec<u8>{
 			_response_line = _response_line.clone() + &format!("{}:{}\r\n", header_name.as_str(), header_value.to_str().unwrap());
 		}		 
 	);
-	let formatted_response = format!("{}\r\n\r\n{}", _response_line,String::from_utf8(body.to_vec()).unwrap());
+	let formatted_response = format!("{}\r\n{}", _response_line,String::from_utf8(body.to_vec()).unwrap());
 	formatted_response.as_bytes().to_vec()
 }
 

@@ -99,12 +99,12 @@ async fn listen<F, O>( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc
 				println!("{:#?}", parameter_hash_map);
 				let req: Request = Request {
 					method,
-					// body,
+					body: body.to_vec(),
 					parameters: parameter_hash_map,
 					headers: header_map,
 					path,
 				};
-				let _ = &(route.closure)(req,stream).await;
+				let _ = &(route.handler)(req,stream).await;
 				
 			}
 		},
