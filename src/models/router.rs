@@ -1,6 +1,7 @@
 use std::{collections::HashMap, future::Future, io::Error, ops::Range, pin::Pin, process::Output, slice::Iter, sync::Arc};
 use http::HeaderMap;
 use regex::{Regex, RegexBuilder};
+use tokio::net::TcpStream;
 
 use super::types::Request;
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
@@ -30,7 +31,7 @@ pub enum  ERouterMethod {
 
 pub struct Route<F, O>
 where 
-	F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 	O: Future<Output = ()> +std::marker::Send  + 'static
 {
 	pub method: ERouterMethod,
@@ -63,7 +64,7 @@ impl ERouterMethod {
 }
 pub struct Router <F, O>
 where 
-	F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 	O: Future<Output = ()> +std::marker::Send  + 'static
 {
 	pub routes : HashMap<String, HashMap<String, Route<F, O>>>,
@@ -71,7 +72,7 @@ where
 }
 impl <F, O> Router<F, O>
 	where 
-		F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 		O: Future<Output = ()> +std::marker::Send  + 'static
 {
 	pub fn new() -> Router<F, O>
@@ -144,12 +145,7 @@ impl <F, O> Router<F, O>
 		(created_regex, path_parameters)
 	}
 }
-struct RouteMethodHelper <T>
-where
-    T: Fn(Request) -> PinnedFuture<()>,
-{
-    pub closure:T
-}
+
 // pub fn connect (closure: impl Future)->(ERouterMethod, impl Future){
 // 	return (ERouterMethod::CONNECT, closure)
 // }
@@ -158,7 +154,7 @@ where
 // }
 pub fn get<F, O> (closure: F) -> (ERouterMethod, F)
 	where 
-		F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 		O: Future<Output = ()> +std::marker::Send  + 'static
 		{
 	let ret= (ERouterMethod::GET,closure);

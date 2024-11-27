@@ -19,7 +19,7 @@ use super::types::Request;
 
 pub async fn bind<F, O>(router:Router<F,O>, address:&str) -> Result<(), Box<dyn std::error::Error>>
 	where 
-		F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 		O: Future<Output = ()> +std::marker::Send  + 'static
 {
 	let listener = TcpListener::bind(address).await?;
@@ -40,7 +40,7 @@ pub async fn bind<F, O>(router:Router<F,O>, address:&str) -> Result<(), Box<dyn 
 
 async fn listen<F, O>( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Router<F, O>>) -> Result<(), Box<dyn std::error::Error>>
 	where 
-		F: Fn(Request) -> O + std::marker::Sync + std::marker::Send + 'static,
+		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
 		O: Future<Output = ()> +std::marker::Send  + 'static
 {
 	let mut buffer = [0; 1024];
@@ -104,7 +104,7 @@ async fn listen<F, O>( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc
 					headers: header_map,
 					path,
 				};
-				&(route.closure)(req).await;
+				let _ = &(route.closure)(req,stream).await;
 				
 			}
 		},
