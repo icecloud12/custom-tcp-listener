@@ -3,10 +3,8 @@ use http::HeaderMap;
 use regex::{Regex, RegexBuilder};
 use tokio::net::TcpStream;
 use http::Response;
-use super::types::Request;
+use super::{route::{ERouterMethod, Route, RouteHandler}, types::Request};
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
-
-
 
 pub fn response_to_bytes( response: Response<&[u8]>) -> Vec<u8>{
 	let (parts, body) = response.into_parts();
@@ -20,120 +18,32 @@ pub fn response_to_bytes( response: Response<&[u8]>) -> Vec<u8>{
 	formatted_response.as_bytes().to_vec()
 }
 
-//#region ERouterMethod
-pub enum  ERouterMethod {
-	CONNECT,
-	DELETE,
-	GET,
-	HEAD,
-	OPTIONS,
-	PATCH,
-	POST,
-	PUT,
-	TRACE,
-}
-//#endregion
-//#region
 
-pub struct Route<F, O>
-where 
-	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-	O: Future<Output = ()> +std::marker::Send  + 'static
+pub struct Router
 {
-	pub method: ERouterMethod,
-	pub path: String,
-	pub handler: F,
-	pub parameters: Vec<String>,
-	pub regex: Regex
-}
-
-impl <F, O> Route<F, O>
-where
-	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-	O: Future<Output = ()> +std::marker::Send  + 'static
-{
-	pub fn connect (handler: F)->(ERouterMethod, F){
-		(ERouterMethod::CONNECT, handler)
-	}
-	pub fn get(handler: F) -> (ERouterMethod, F){
-		(ERouterMethod::GET,handler)
-	}
-	pub fn delete (handler: F)->(ERouterMethod, F){
-		(ERouterMethod::DELETE, handler)
-	}
-	pub fn head (handler :F)->(ERouterMethod, F){
-		(ERouterMethod::HEAD, handler)
-	}
-	pub fn option (handler :F)->(ERouterMethod, F){
-		(ERouterMethod::OPTIONS, handler)
-	}
-	pub fn patch (handler :F)->(ERouterMethod, F){
-		(ERouterMethod::PATCH, handler)
-	}
-	pub fn post (handler :F)->(ERouterMethod, F){
-		(ERouterMethod::POST, handler)
-	}
-	pub fn put(handler :F)->(ERouterMethod, F){
-		(ERouterMethod::PUT, handler)
-	}
-	pub fn trace(handler :F)->(ERouterMethod, F){
-		(ERouterMethod::TRACE, handler)
-	}
-
-}
-//#endregion
-
-impl ERouterMethod {
-	fn as_str(&self) -> &'static str {
-		match self {
-			ERouterMethod::CONNECT => "CONNECT",
-			ERouterMethod::DELETE => "DELETE",
-			ERouterMethod::GET => "GET",
-			ERouterMethod::HEAD => "HEAD",
-			ERouterMethod::OPTIONS => "OPTIONS",
-			ERouterMethod::PATCH => "PATCH",
-			ERouterMethod::POST => "POST",
-			ERouterMethod::PUT => "PUT",
-			ERouterMethod::TRACE => "TRACE",
-		}
-	}
-	fn as_slice() -> [ERouterMethod; 9]{
-		[
-			ERouterMethod::CONNECT,ERouterMethod::DELETE,ERouterMethod::GET,ERouterMethod::HEAD,ERouterMethod::OPTIONS,ERouterMethod::PATCH,ERouterMethod::POST,ERouterMethod::PUT,ERouterMethod::TRACE
-		]
-	}
-}
-pub struct Router <F, O>
-	where 
-	F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-	O: Future<Output = ()> +std::marker::Send  + 'static
-{
-	pub routes : HashMap<String, HashMap<String, Route<F, O>>>,
+	pub routes : HashMap<String, HashMap<String, Route>>,
 	pub keys: Vec<String>
 }
-impl <F, O> Router<F, O>
-	where 
-		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-		O: Future<Output = ()> +std::marker::Send  + 'static
+impl Router
 {
-	pub fn new() -> Router<F, O>
+	pub fn new() -> Router
 	{
-		let mut hm: HashMap<String, HashMap<String, Route<F, O>>> = HashMap::new();
+		let mut hm: HashMap<String, HashMap<String, Route>> = HashMap::new();
 		Router {
     		routes: hm,
 			keys: vec![]
 		}		
 	}
-	pub fn route (self, path:String, route_helper:(ERouterMethod, F)) -> Router<F, O>
+	pub fn route (self, path:String, route_helper:(ERouterMethod, RouteHandler)) -> Router
 	{
 		let mut hm= self.routes;
 		let mut keys = self.keys;
-		let (regex_path, path_parameters) = Router::<F, O>::extract_path_parameter(&path);
+		let (regex_path, path_parameters) = Router::extract_path_parameter(&path);
 		
 		let method_route_pairs  = match hm.get_mut(&regex_path.as_str().to_string()) {
 			Some(p) => p,
 			None => {
-				let new_val = HashMap::<String, Route<F, O>>::new();
+				let new_val = HashMap::<String, Route>::new();
 				hm.insert(regex_path.as_str().to_string(), new_val);
 				hm.get_mut(&regex_path.as_str().to_string()).unwrap()
 			}
@@ -141,8 +51,6 @@ impl <F, O> Router<F, O>
 		if !keys.contains(&regex_path.as_str().to_string()) {
 			keys.push(regex_path.as_str().to_string());
 		}
-		
-		
 		
 		method_route_pairs.insert(route_helper.0.as_str().to_string(), Route{
 			method: route_helper.0,

@@ -2,6 +2,7 @@ use std::any;
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::future::Future;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use http::header::Keys;
@@ -11,16 +12,14 @@ use regex::Regex;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt};
 
+use super::route::{ERouterMethod, Route};
 use super::router::{ PinnedFuture, Router};
 use super::types::Request;
 
 
 
 
-pub async fn bind<F, O>(router:Router<F,O>, address:&str) -> Result<(), Box<dyn std::error::Error>>
-	where 
-		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-		O: Future<Output = ()> +std::marker::Send  + 'static
+pub async fn bind(router:Router, address:&str) -> Result<(), Box<dyn std::error::Error>>
 {
 	let listener = TcpListener::bind(address).await?;
 	let rc_keys:Arc<Vec<Regex>> = Arc::new(router.keys.iter().map(|k| Regex::from_str(k).unwrap()).collect());
@@ -31,17 +30,16 @@ pub async fn bind<F, O>(router:Router<F,O>, address:&str) -> Result<(), Box<dyn 
 		
 		let c_rc_keys = Arc::clone(&rc_keys);
 		let c_rc_router = Arc::clone(&rc_router);
+		
 		tokio::spawn(async move {
-			let _listen_result = listen::<F, O>(stream, c_rc_keys, c_rc_router).await;
+			let _listen_result = listen(stream, c_rc_keys, c_rc_router).await;
 		});
 	}
 	
 }
 
-async fn listen<F, O>( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Router<F, O>>) -> Result<(), Box<dyn std::error::Error>>
-	where 
-		F: Fn(Request, TcpStream) -> O + std::marker::Sync + std::marker::Send + 'static,
-		O: Future<Output = ()> +std::marker::Send  + 'static
+
+async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Router>) -> Result<(), Box<dyn std::error::Error>>
 {
 	let mut buffer = [0; 1024];
 	let _bytes_read = stream.read(&mut buffer).await?;
@@ -104,7 +102,9 @@ async fn listen<F, O>( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc
 					headers: header_map,
 					path,
 				};
-				let _ = &(route.handler)(req,stream).await;
+				let handler = route.handler.deref();
+				handler(req, stream).await;
+				// let _ = (route.handler)(req,stream).await;
 				
 			}
 		},

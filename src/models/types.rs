@@ -2,7 +2,6 @@ use std::{collections::HashMap, sync::Arc};
 
 use http::HeaderMap;
 
-use super::router::ERouterMethod;
 
 #[derive(Debug)]
 pub struct Request {
