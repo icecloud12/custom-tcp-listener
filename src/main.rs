@@ -3,7 +3,7 @@ use std::{convert::Infallible, error::Error, future::Future, pin::Pin, sync::{Ar
 use http::{request, Response, StatusCode};
 use tokio::{self, io::AsyncWriteExt, net::{tcp, TcpStream}, sync::Mutex};
 use dotenv::dotenv;
-use custom_lib::models::{
+use custom_tcp_listener::models::{
 	 listener, route::{get, post, ERouterMethod, Route, RouteHandler}, router :: {
 		response_to_bytes, Router,
 	}, types::Request
@@ -38,14 +38,14 @@ async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), 
 	let body= serde_json::from_slice::<serde_json::Value>(request.body.as_slice());
 	println!("Recieved body{:#?}", body);
 	//response here
-	let response_body: &[u8] = b"Hello World!";
+	let response_body: &[u8] = b"Hello World!1";
 	let response_builder = Response::builder().status(StatusCode::OK);
 	let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
 		.header("Content-Type", "text/json")
 		.body(response_body).unwrap();
 	let response_bytes = response_to_bytes(response);	
-	// let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
-	// let _stream_flush = tcpstream.flush().await;
+	let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
+	let _stream_flush = tcpstream.flush().await;
 	// let mut guard = STREAMQUEUE.get().unwrap().lock().await;
 	// guard.push(tcpstream);
 
@@ -53,20 +53,20 @@ async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), 
 }
 async fn hello_world2(request: Request, mut tcpstream: TcpStream) -> Result<(), Infallible>
 {
-		let body= serde_json::from_slice::<serde_json::Value>(request.body.as_slice());
-		println!("Recieved body{:#?}", body);
-		//response here
-		let response_body: &[u8] = b"Hello World!";
-		let response_builder = Response::builder().status(StatusCode::OK);
-		let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
-			.header("Content-Type", "text/json")
-			.body(response_body).unwrap();
-		let response_bytes = response_to_bytes(response);	
+		// let body= serde_json::from_slice::<serde_json::Value>(request.body.as_slice());
+		// println!("Recieved body{:#?}", body);
+		// //response here
+		// let response_body: &[u8] = b"Hello World!2";
+		// let response_builder = Response::builder().status(StatusCode::OK);
+		// let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
+		// 	.header("Content-Type", "text/json")
+		// 	.body(response_body).unwrap();
+		// let response_bytes = response_to_bytes(response);	
 		// let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
 		// let _stream_flush = tcpstream.flush().await;
-		// let mut guard = STREAMQUEUE.get().unwrap().lock().await;
-		// guard.push(tcpstream);
-
+		// // let mut guard = STREAMQUEUE.get().unwrap().lock().await;
+		// // guard.push(tcpstream);
+	let _ = hello_world1(request, tcpstream).await;
 	Ok(())
 }
 

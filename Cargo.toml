@@ -15,5 +15,5 @@ serde_json = "1.0.133"
 tokio = { version = "1.41.1", features = ["full"] }
 
 [lib]
-name = "custom_lib"
+name = "custom_tcp_listener"
 path = "src/lib.rs"

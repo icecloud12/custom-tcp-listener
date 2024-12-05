@@ -1,19 +1,14 @@
-use std::any;
-use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
-use std::future::Future;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
-use http::header::Keys;
 use httparse;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use regex::Regex;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::io::{AsyncReadExt};
+use tokio::io::AsyncReadExt;
 
-use super::route::{ERouterMethod, Route};
-use super::router::{ PinnedFuture, Router};
+use super::router::Router;
 use super::types::Request;
 
 
@@ -70,22 +65,25 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 	});
 
 	//resolve path
-	let mut matched_paths:Vec<String> = Vec::new();
+	let mut maximum_path_segments: usize = 0;
+	let mut selected_route: Option<String> = None;
 	keys.iter().for_each(|regex_entry|{
 		if regex_entry.is_match(&path){
-			matched_paths.push(regex_entry.as_str().to_string());
+			// matched_paths.push(regex_entry.as_str().to_string());
+			let current_segments_count = router.routes.get(&regex_entry.as_str().to_string()).unwrap().get(&method).unwrap().path.split("/").count();
+			if current_segments_count > maximum_path_segments {
+				maximum_path_segments = current_segments_count;
+				selected_route = Some(regex_entry.as_str().to_string());
+			}
 		}
 	});
-	let match_count = matched_paths.len();
-	match match_count {
-		0 => {
+	match selected_route {
+		None => {
 			//resolve using the database entries prefixes
 			println!("return 404")	
 		},
-		count if ( count == 1) => {
-			//only 1 match
-			
-			if let Some(route) = router.routes.get(&matched_paths[0]).unwrap().get(&method){
+		Some(path) => {
+			if let Some(route) = router.routes.get(&path).unwrap().get(&method){
 				let regex = &route.regex;
 				let mut parameter_hash_map = HashMap::<String, String>::new();
 				
@@ -103,14 +101,12 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 					path,
 				};
 				let handler = route.handler.deref();
-				handler(req, stream).await;
+				let _ = handler(req, stream).await;
 				// let _ = (route.handler)(req,stream).await;
 				
 			}
 		},
-		_ => {
-			//multiple matches
-		}
+		
 	}
 	return Ok(());
 

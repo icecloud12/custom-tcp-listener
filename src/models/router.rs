@@ -1,9 +1,7 @@
-use std::{collections::HashMap, future::Future, io::Error, ops::Range, pin::Pin, process::Output, slice::Iter, sync::Arc};
-use http::HeaderMap;
+use std::{collections::HashMap, future::Future, ops::Range, pin::Pin};
 use regex::{Regex, RegexBuilder};
-use tokio::net::TcpStream;
 use http::Response;
-use super::{route::{ERouterMethod, Route, RouteHandler}, types::Request};
+use super::route::{ERouterMethod, Route, RouteHandler};
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 
 pub fn response_to_bytes( response: Response<&[u8]>) -> Vec<u8>{
