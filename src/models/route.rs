@@ -1,5 +1,6 @@
 use std::{convert::Infallible, future::Future, pin::Pin};
 use regex::Regex;
+use std::error::Error;
 use tokio::net::TcpStream;
 
 use super::types::Request;
@@ -18,7 +19,7 @@ pub enum  ERouterMethod {
 }
 //#endregion
 
-pub type RouteHandler = Box<dyn Fn(Request, TcpStream) -> Pin<Box<dyn Future<Output = Result<(), Infallible>> + Send + Sync >> + Send + Sync>;
+pub type RouteHandler = Box<dyn Fn(Request, TcpStream) -> Pin<Box<dyn Future<Output = Result<(), Box<dyn Error>>> + Send >> + Send + Sync>;
 
 //#region
 
@@ -34,57 +35,57 @@ pub struct Route
 
 pub fn connect<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::CONNECT, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 
 pub fn get<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::GET, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn delete<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::DELETE, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn head<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::HEAD, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn option<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::OPTIONS, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn patch<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::PATCH, Box::new( move |request, tcp_stream: TcpStream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn post<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::POST, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 pub fn put<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>> + 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>> + 'static + Send
 {
 	(ERouterMethod::PUT, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }
 
 pub fn trace<T>(handler: fn(Request, TcpStream) -> T) -> (ERouterMethod, RouteHandler) 
 where
-	T: Future<Output = Result<(), Infallible>>+ 'static + Send + Sync
+	T: Future<Output = Result<(), Box<dyn Error>>>+ 'static + Send
 {
 	(ERouterMethod::TRACE, Box::new( move |request, tcp_stream| Box::pin(handler(request, tcp_stream))))
 }

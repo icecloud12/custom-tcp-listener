@@ -1,6 +1,7 @@
 use std::{convert::Infallible, error::Error, future::Future, pin::Pin, sync::{Arc, OnceLock}};
 
 use http::{request, Response, StatusCode};
+use mongodb::{bson::{doc, oid::ObjectId}, Client, Collection};
 use tokio::{self, io::AsyncWriteExt, net::{tcp, TcpStream}, sync::Mutex};
 use dotenv::dotenv;
 use custom_tcp_listener::models::{
@@ -32,7 +33,7 @@ static STREAMQUEUE:OnceLock<Arc<Mutex<Vec<TcpStream>>>> = OnceLock::new();
 	
 // }
 
-async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), Infallible>
+async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), Box<dyn std::error::Error>>
 {
 
 	let body= serde_json::from_slice::<serde_json::Value>(request.body.as_slice());
@@ -42,7 +43,7 @@ async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), 
 	let response_builder = Response::builder().status(StatusCode::OK);
 	let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
 		.header("Content-Type", "text/json")
-		.body(response_body).unwrap();
+		.body(response_body)?;
 	let response_bytes = response_to_bytes(response);	
 	let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
 	let _stream_flush = tcpstream.flush().await;
@@ -51,28 +52,34 @@ async fn hello_world1(request: Request, mut tcpstream: TcpStream) -> Result<(), 
 
 	Ok(())
 }
-async fn hello_world2(request: Request, mut tcpstream: TcpStream) -> Result<(), Infallible>
+async fn hello_world2(request: Request, mut tcpstream: TcpStream) -> Result<(), Box<dyn std::error::Error>>
 {
-		// let body= serde_json::from_slice::<serde_json::Value>(request.body.as_slice());
-		// println!("Recieved body{:#?}", body);
-		// //response here
-		// let response_body: &[u8] = b"Hello World!2";
-		// let response_builder = Response::builder().status(StatusCode::OK);
-		// let response: Response<&[u8]> = response_builder.header("content-Length", response_body.len())
-		// 	.header("Content-Type", "text/json")
-		// 	.body(response_body).unwrap();
-		// let response_bytes = response_to_bytes(response);	
-		// let _stream_write = tcpstream.write_all(&response_bytes.as_slice()).await;
-		// let _stream_flush = tcpstream.flush().await;
-		// // let mut guard = STREAMQUEUE.get().unwrap().lock().await;
-		// // guard.push(tcpstream);
-	let _ = hello_world1(request, tcpstream).await;
+	
+	let uri = "mongodb://localhost:27017/";
+	let client = Client::with_uri_str(uri).await.unwrap();
+	let database = client.database("orchestrator");
+    let my_coll: Collection<Image> = database.collection("images");
+	// Find a movie based on the title value
+    let mut my_image: mongodb::Cursor<Option<Image>> = my_coll.find(doc!{}).await.unwrap().with_type();
+	while my_image.advance().await.is_ok() {
+		let image = my_image.deserialize_current();
+		if image.is_ok() {
+			println!("Found an image:\n{:#?}", image);
+		}
+	}
+	
 	Ok(())
 }
-
+#[derive(Debug, Deserialize)]
+struct Image {
+	_id: ObjectId,
+	docker_image_id: String
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
+
+	
 	dotenv().ok();
 	let address: &str = "0.0.0.0:5000";
 	let prefix: &str = "/orchestrator/api";
