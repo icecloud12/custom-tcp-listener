@@ -59,13 +59,12 @@ async fn hello_world2(request: Request, mut tcpstream: TcpStream) -> Result<(), 
 	let client = Client::with_uri_str(uri).await.unwrap();
 	let database = client.database("orchestrator");
     let my_coll: Collection<Image> = database.collection("images");
-	// Find a movie based on the title value
-    let mut my_image: mongodb::Cursor<Option<Image>> = my_coll.find(doc!{}).await.unwrap().with_type();
-	while my_image.advance().await.is_ok() {
-		let image = my_image.deserialize_current();
-		if image.is_ok() {
-			println!("Found an image:\n{:#?}", image);
-		}
+    let mut my_image= my_coll.find(doc!{}).await.unwrap();
+	while my_image.advance().await? {
+		let a = my_image.deserialize_current();
+		if a.is_ok(){
+			println!("{:?}", a);
+		};
 	}
 	
 	Ok(())
