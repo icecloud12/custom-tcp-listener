@@ -92,7 +92,6 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 						parameter_hash_map.insert( key.clone(), c[key.as_str()].to_string());
 					});			
 				});
-				println!("{:#?}", parameter_hash_map);
 				let req: Request = Request {
 					method,
 					body: body.to_vec(),
