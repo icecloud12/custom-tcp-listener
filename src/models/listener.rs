@@ -69,11 +69,13 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 	let mut selected_route: Option<String> = None;
 	keys.iter().for_each(|regex_entry|{
 		if regex_entry.is_match(&path){
-			// matched_paths.push(regex_entry.as_str().to_string());
-			let current_segments_count = router.routes.get(&regex_entry.as_str().to_string()).unwrap().get(&method).unwrap().path.split("/").count();
-			if current_segments_count > maximum_path_segments {
-				maximum_path_segments = current_segments_count;
-				selected_route = Some(regex_entry.as_str().to_string());
+			//regex matched
+			if let Some(route) = router.routes.get(&regex_entry.as_str().to_string()).unwrap().get(&method) {
+				let current_segments_count = route.path.split("/").count();
+				if current_segments_count > maximum_path_segments {
+					maximum_path_segments = current_segments_count;
+					selected_route = Some(regex_entry.as_str().to_string());
+				}
 			}
 		}
 	});
