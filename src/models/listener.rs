@@ -88,8 +88,8 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 			if let Some(route) = router.routes.get(&path).unwrap().get(&method){
 				let regex = &route.regex;
 				let mut parameter_hash_map = HashMap::<String, String>::new();
-				
-				regex.captures_iter(req.path.unwrap()).into_iter().for_each(|c| {
+				let request_path = req.path.unwrap();
+				regex.captures_iter(request_path).into_iter().for_each(|c| {
 					route.parameters.iter().enumerate().for_each(|(index, key)|{
 						parameter_hash_map.insert( key.clone(), c[key.as_str()].to_string());
 					});			
@@ -99,7 +99,7 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 					body: body.to_vec(),
 					parameters: parameter_hash_map,
 					headers: header_map,
-					path,
+					path: request_path.to_string(),
 				};
 				let handler = route.handler.deref();
 				let _ = handler(req, stream).await;
