@@ -4,7 +4,7 @@ use regex::{Regex, RegexBuilder};
 use std::{collections::HashMap, future::Future, ops::Range, pin::Pin};
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 
-pub fn response_to_bytes<T>(response: Response<T>) -> Vec<u8> {
+pub fn response_to_bytes(response: Response<Vec<u8>>) -> Vec<u8> {
     let (parts, body) = response.into_parts();
     let mut _response_line = format!("{:#?} {}\r\n", parts.version, parts.status);
     parts
