@@ -56,7 +56,11 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 	//method, path, body, headers
 	let method = req.method.unwrap().to_string();
 	let path = req.path.unwrap().to_string();
-	let body= &buffer[ byte_offset.unwrap()..(byte_offset.unwrap() + content_length)];
+	
+	let body  = match byte_offset {
+		Ok(b) => buffer[ byte_offset.unwrap()..(byte_offset.unwrap() + content_length)].to_vec(),
+		Err(e) => vec![],
+	};
 	let mut header_map: HeaderMap<HeaderValue> = HeaderMap::new();
 	req.headers.iter().for_each(|header_item|{
 		let header_name = HeaderName::from_str(header_item.name).unwrap();
@@ -96,7 +100,7 @@ async fn listen( mut stream: TcpStream, keys: Arc<Vec<Regex>>, router: Arc<Route
 				});
 				let req: Request = Request {
 					method,
-					body: body.to_vec(),
+					body: body,
 					parameters: parameter_hash_map,
 					headers: header_map,
 					path: request_path.to_string(),
