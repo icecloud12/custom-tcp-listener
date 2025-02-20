@@ -22,7 +22,7 @@ pub async fn bind(
     certificate_key: impl AsRef<std::path::Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     
-    let certs = CertificateDer::pem_file_iter(certificate_der)?.collect::<Result<Vec<_>, _>>()?;
+    let certs = CertificateDer::pem_file_iter(certificate_crt)?.collect::<Result<Vec<_>, _>>()?;
     let key = PrivateKeyDer::from_pem_file(certificate_key)?;
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
