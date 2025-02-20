@@ -18,7 +18,7 @@ use super::types::Request;
 pub async fn bind(
     router: Router,
     address: &str,
-    certificate_der: impl AsRef<std::path::Path>,
+    certificate_crt: impl AsRef<std::path::Path>,
     certificate_key: impl AsRef<std::path::Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     
