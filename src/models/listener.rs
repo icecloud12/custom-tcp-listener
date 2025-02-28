@@ -19,7 +19,7 @@ use super::types::Request;
 pub async fn bind<Decoration>(
     router: Router<Decoration>,
     address: &str,
-    certificate_der: impl AsRef<std::path::Path>,
+    certificate_crt: impl AsRef<std::path::Path>,
     certificate_key: impl AsRef<std::path::Path>,
     decoration: Decoration,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -27,7 +27,7 @@ where
     Decoration: 'static + Send,
     Arc<Decoration>: 'static + Send,
 {
-    let certs = CertificateDer::pem_file_iter(certificate_der)?.collect::<Result<Vec<_>, _>>()?;
+    let certs = CertificateDer::pem_file_iter(certificate_crt)?.collect::<Result<Vec<_>, _>>()?;
     let key = PrivateKeyDer::from_pem_file(certificate_key)?;
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
