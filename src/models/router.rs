@@ -1,7 +1,7 @@
 use super::route::{ERouterMethod, Route, RouteHandler};
 use http::Response;
 use regex::{Regex, RegexBuilder};
-use std::{collections::HashMap, future::Future, ops::Range, pin::Pin};
+use std::{collections::HashMap, future::Future, ops::Range, pin::Pin, sync::Arc};
 pub type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 
 pub fn response_to_bytes(response: Response<Vec<u8>>) -> Vec<u8> {
@@ -26,19 +26,27 @@ pub fn response_to_bytes(response: Response<Vec<u8>>) -> Vec<u8> {
     formatted_response.as_bytes().to_vec()
 }
 
-pub struct Router {
-    pub routes: HashMap<String, HashMap<String, Route>>,
+pub struct Router<K>
+where
+    K: 'static + Send,
+    Arc<K>: 'static + Send,
+{
+    pub routes: HashMap<String, HashMap<String, Route<K>>>,
     pub keys: Vec<String>,
 }
-impl Router {
-    pub fn new() -> Router {
-        let mut hm: HashMap<String, HashMap<String, Route>> = HashMap::new();
+impl<K> Router<K>
+where
+    K: 'static + Send,
+    Arc<K>: 'static + Send,
+{
+    pub fn new() -> Router<K> {
+        let mut hm: HashMap<String, HashMap<String, Route<K>>> = HashMap::new();
         Router {
             routes: hm,
             keys: vec![],
         }
     }
-    pub fn route(self, path: String, route_helper: (ERouterMethod, RouteHandler)) -> Router {
+    pub fn route(self, path: String, route_helper: (ERouterMethod, RouteHandler<K>)) -> Router<K> {
         let mut hm = self.routes;
         let mut keys = self.keys;
         let (regex_path, path_parameters) = Router::extract_path_parameter(&path);
@@ -46,7 +54,7 @@ impl Router {
         let method_route_pairs = match hm.get_mut(&regex_path.as_str().to_string()) {
             Some(p) => p,
             None => {
-                let new_val = HashMap::<String, Route>::new();
+                let new_val = HashMap::<String, Route<K>>::new();
                 hm.insert(regex_path.as_str().to_string(), new_val);
                 hm.get_mut(&regex_path.as_str().to_string()).unwrap()
             }

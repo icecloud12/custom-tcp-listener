@@ -3,25 +3,30 @@ use httparse;
 use regex::Regex;
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use tokio_rustls::server::TlsStream;
 use std::collections::HashMap;
+use std::error::Error;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
+use tokio_rustls::server::TlsStream;
 use tokio_rustls::TlsAcceptor;
 
 use super::router::Router;
 use super::types::Request;
 
-pub async fn bind(
-    router: Router,
+pub async fn bind<Decoration>(
+    router: Router<Decoration>,
     address: &str,
     certificate_der: impl AsRef<std::path::Path>,
     certificate_key: impl AsRef<std::path::Path>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    
+    decoration: Decoration,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    Decoration: 'static + Send,
+    Arc<Decoration>: 'static + Send,
+{
     let certs = CertificateDer::pem_file_iter(certificate_der)?.collect::<Result<Vec<_>, _>>()?;
     let key = PrivateKeyDer::from_pem_file(certificate_key)?;
     let config = rustls::ServerConfig::builder()
@@ -37,6 +42,7 @@ pub async fn bind(
             .collect(),
     );
     let rc_router = Arc::new(router);
+    let arc_decoration: Arc<Decoration> = Arc::new(decoration);
     loop {
         let (stream, _socket_addr) = listener.accept().await?;
         let acceptor = acceptor.clone();
@@ -45,24 +51,30 @@ pub async fn bind(
             Ok(stream) => {
                 let c_rc_keys = Arc::clone(&rc_keys);
                 let c_rc_router = Arc::clone(&rc_router);
-
+                let c_arc_decoration = Arc::clone(&arc_decoration);
                 tokio::spawn(async move {
-                    let _listen_result = listen(stream, c_rc_keys, c_rc_router).await;
+                    let _listen_result =
+                        listen::<Decoration>(stream, c_rc_keys, c_rc_router, c_arc_decoration)
+                            .await;
                 });
             }
             Err(error) => {
-                println!("{}",error);
+                println!("{}", error);
             }
         }
-        
     }
 }
 
-async fn listen(
+async fn listen<Decoration>(
     mut stream: TlsStream<TcpStream>,
     keys: Arc<Vec<Regex>>,
-    router: Arc<Router>,
-) -> Result<(), Box<dyn std::error::Error>> {
+    router: Arc<Router<Decoration>>,
+    decoration: Arc<Decoration>,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    Decoration: 'static + Send,
+    Arc<Decoration>: 'static + Send,
+{
     let mut buffer = [0; 1024];
     let _bytes_read = stream.read(&mut buffer).await?;
 
@@ -134,7 +146,7 @@ async fn listen(
                         .parameters
                         .iter()
                         .enumerate()
-                        .for_each(|(index, key)| {
+                        .for_each(|(_index, key)| {
                             parameter_hash_map.insert(key.clone(), c[key.as_str()].to_string());
                         });
                 });
@@ -146,7 +158,7 @@ async fn listen(
                     path: request_path.to_string(),
                 };
                 let handler = route.handler.deref();
-                let _ = handler(req, stream).await;
+                let _ = handler(req, stream, decoration).await;
                 // let _ = (route.handler)(req,stream).await;
             }
         }
